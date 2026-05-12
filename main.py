@@ -5,8 +5,9 @@ import json
 app = Flask(__name__)
 
 # ← ضع بياناتك هنا
-8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI = "ضع_التوكن_هنا"
-1621604072      = "ضع_Chat_ID_هنا"
+# ✅ صح — التوكن يروح داخل علامات التنصيص
+TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
+Chat_ID  = "1621604072هنا"
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
