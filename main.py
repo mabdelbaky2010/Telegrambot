@@ -5,11 +5,11 @@ import json
 app = Flask(__name__)
 
 # ← ضع بياناتك هنا
-TELEGRAM_TOKEN = "ضع_التوكن_هنا"
-CHAT_ID        = "ضع_Chat_ID_هنا"
+8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI = "ضع_التوكن_هنا"
+1621604072       = "ضع_Chat_ID_هنا"
 
 def send_telegram(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
     data = {
         "chat_id": CHAT_ID,
         "text": message,
