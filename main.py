@@ -11,7 +11,7 @@ CHAT_ID        = "1621604072"
 def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
     data = {
-        "chat_id": CHAT_ID,
+        "CHAT_ID": CHAT_ID,
         "text": message,
         "parse_mode": "HTML"
     }
