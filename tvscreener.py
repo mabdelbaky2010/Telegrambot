@@ -88,7 +88,7 @@ def save_state(symbols: list):
 
 
 def send_telegram(text: str):
-    url  = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    url  = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
     data = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     r    = requests.post(url, json=data, timeout=10)
     r.raise_for_status()
