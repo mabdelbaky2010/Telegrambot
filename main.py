@@ -27,6 +27,18 @@ def webhook():
     ema20    = data.get("ema20", "")
     interval = data.get("interval", "")
     time     = data.get("time", "")
+    
+ # تقريب EMA لرقمين بعد العلامة العشرية
+    ema10_raw = data.get("ema10", "")
+    ema20_raw = data.get("ema20", "")
+    try:
+        ema10 = f"{float(ema10_raw):.2f}"
+    except:
+        ema10 = ema10_raw
+    try:
+        ema20 = f"{float(ema20_raw):.2f}"
+    except:
+        ema20 = ema20_raw
 
     icon = "🟢" if action == "BUY" else "🔴"
     
