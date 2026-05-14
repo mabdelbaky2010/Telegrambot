@@ -2,26 +2,26 @@
 """
 TradingView EMA10/EMA20 Crossover Screener  —  5-minute timeframe
 ------------------------------------------------------------------
-Scans US stocks every run for EMA10 crossing above EMA20 on 5-min bars.
-Only sends Telegram alerts for FRESH crossovers (new since the last scan).
-Run this script via Windows Task Scheduler every 3 minutes.
+Scans US stocks every 3 minutes for EMA10 crossing above EMA20.
+Only sends Telegram alerts for FRESH crossovers (new since last scan).
 
-Requirements:  pip install requests
+Deploy on Railway:  start command = python tvscreener.py
+Requirements:       pip install requests
 """
 
 import requests
 import json
 import os
+import time
 from datetime import datetime
 
 # ── CONFIG ──────────────────────────────────────────────────────────────────
-TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHAT_ID        = "1621604072"
+TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI")
+CHAT_ID        = os.environ.get("CHAT_ID",        "1621604072")
 
-# State file stored next to this script (tracks last scan's symbols)
 STATE_FILE     = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screener_state.json")
-LOG_FILE       = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screener_log.txt")
 
+INTERVAL_SEC   = 180        # run every 3 minutes
 MIN_PRICE      = 1.0        # skip stocks below $1
 MIN_VOLUME     = 10_000     # skip 5-min bars with < 10k volume
 MAX_RESULTS    = 100        # max stocks to pull from TradingView screener
@@ -29,17 +29,13 @@ MAX_RESULTS    = 100        # max stocks to pull from TradingView screener
 
 
 def log(msg: str):
-    ts      = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    line    = f"[{ts}] {msg}"
-    print(line)
-    with open(LOG_FILE, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
+    print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}", flush=True)
 
 
 def fetch_signals() -> dict:
     """
-    Hit TradingView screener for US stocks where:
-      EMA10 (5-min) > EMA20 (5-min), price > MIN_PRICE, volume > MIN_VOLUME
+    Query TradingView screener for US stocks where
+    EMA10 (5-min) > EMA20 (5-min), filtered by price and volume.
     Returns {symbol: {field: value}}.
     """
     url     = "https://scanner.tradingview.com/america/scan"
@@ -51,14 +47,14 @@ def fetch_signals() -> dict:
     }
 
     columns = [
-        "name",         # ticker symbol
-        "description",  # company name
-        "close|5",      # last price on 5-min chart
-        "change|5",     # % change on 5-min chart
-        "volume|5",     # volume on current 5-min bar
-        "EMA10|5",      # EMA(10) on 5-min
-        "EMA20|5",      # EMA(20) on 5-min
-        "exchange",     # NYSE / NASDAQ
+        "name",
+        "description",
+        "close|5",
+        "change|5",
+        "volume|5",
+        "EMA10|5",
+        "EMA20|5",
+        "exchange",
     ]
 
     payload = {
@@ -75,7 +71,6 @@ def fetch_signals() -> dict:
 
     r = requests.post(url, json=payload, headers=headers, timeout=15)
     r.raise_for_status()
-
     rows = r.json().get("data", [])
     return {row["s"]: dict(zip(columns, row["d"])) for row in rows}
 
@@ -93,7 +88,7 @@ def save_state(symbols: list):
 
 
 def send_telegram(text: str):
-    url  = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
+    url  = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     r    = requests.post(url, json=data, timeout=10)
     r.raise_for_status()
@@ -101,8 +96,8 @@ def send_telegram(text: str):
 
 def fmt_vol(v) -> str:
     v = v or 0
-    if v >= 1_000_000: return f"{v/1_000_000:.1f}M"
-    if v >= 1_000:     return f"{v/1_000:.0f}K"
+    if v >= 1_000_000: return f"{v / 1_000_000:.1f}M"
+    if v >= 1_000:     return f"{v / 1_000:.0f}K"
     return str(int(v))
 
 
@@ -110,12 +105,11 @@ def build_message(new_signals: dict, total_in_signal: int) -> str:
     now   = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
     count = len(new_signals)
     lines = [
-        f"📡 <b>EMA10 ✕ EMA20 Crossover Alert</b>",
-        f"⏱ 5-min chart  |  US Stocks",
+        "📡 <b>EMA10 ✕ EMA20 Crossover Alert</b>",
+        "⏱ 5-min chart  |  US Stocks",
         f"🕐 {now}",
         f"🆕 {count} new signal(s)  |  {total_in_signal} total in zone\n",
     ]
-
     for sym, d in new_signals.items():
         ticker = sym.split(":")[-1]
         name   = (d.get("description") or ticker)[:22]
@@ -126,41 +120,32 @@ def build_message(new_signals: dict, total_in_signal: int) -> str:
         ema20  = d.get("EMA20|5")  or 0
         exch   = d.get("exchange") or ""
         icon   = "🟢" if chg >= 0 else "🔴"
-
         lines.append(
             f"{icon} <b>{ticker}</b>  <i>{name}</i>  [{exch}]\n"
             f"   💰 ${price:.2f}  ({chg:+.2f}%)\n"
             f"   📈 EMA10: {ema10:.3f}  →  EMA20: {ema20:.3f}\n"
             f"   📦 Vol: {fmt_vol(vol)}\n"
         )
-
     return "\n".join(lines)
 
 
-def main():
-    log("Screener started.")
-
-    # 1 — Fetch current signals from TradingView
+def scan_once():
+    log("Running screener scan…")
     try:
         current = fetch_signals()
-        log(f"TradingView returned {len(current)} stocks in EMA10>EMA20 signal.")
+        log(f"TradingView: {len(current)} stocks in EMA10>EMA20 signal.")
     except Exception as e:
         log(f"ERROR fetching screener: {e}")
         return
 
-    # 2 — Compare with last run to find brand-new crossovers
     state          = load_state()
     prev_symbols   = set(state.get("symbols", []))
     curr_symbols   = set(current.keys())
     new_crossovers = curr_symbols - prev_symbols
 
-    log(f"New crossovers: {len(new_crossovers)} | "
-        f"Exited signal: {len(prev_symbols - curr_symbols)}")
-
-    # 3 — Save state for next run
+    log(f"New crossovers: {len(new_crossovers)} | Exited: {len(prev_symbols - curr_symbols)}")
     save_state(list(curr_symbols))
 
-    # 4 — Send Telegram alert only for fresh crossovers
     if new_crossovers:
         new_signals = {s: current[s] for s in new_crossovers}
         msg = build_message(new_signals, total_in_signal=len(curr_symbols))
@@ -169,9 +154,22 @@ def main():
             tickers = sorted(s.split(":")[-1] for s in new_crossovers)
             log(f"Alert sent → {tickers}")
         except Exception as e:
-            log(f"ERROR sending Telegram message: {e}")
+            log(f"ERROR sending Telegram: {e}")
     else:
-        log("No new crossovers — Telegram message skipped.")
+        log("No new crossovers — no message sent.")
+
+
+def main():
+    log("=== TradingView EMA Screener started ===")
+    log(f"Scanning every {INTERVAL_SEC // 60} minutes. Market: US Stocks | TF: 5-min")
+
+    while True:
+        try:
+            scan_once()
+        except Exception as e:
+            log(f"Unexpected error: {e}")
+        log(f"Sleeping {INTERVAL_SEC}s until next scan…\n")
+        time.sleep(INTERVAL_SEC)
 
 
 if __name__ == "__main__":
