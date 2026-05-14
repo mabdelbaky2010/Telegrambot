@@ -36,6 +36,7 @@ def webhook():
         f"💰 السعر: {price} ر.س\n"
         f"📈 EMA10: {ema10}  |  EMA20: {ema20}\n"
         f"⏱ الفريم: {interval}\n"
+        f" القرار: {action}\n"
         f"🕐 {time}"
     )
     
