@@ -2,7 +2,7 @@
 """
 TradingView EMA10/EMA20 Crossover Screener  —  5-minute timeframe
 ------------------------------------------------------------------
-Scans US stocks every 3 minutes for EMA10 crossing above EMA20.
+Scans Saudi stocks (Tadawul) every 3 minutes for EMA10 crossing above EMA20.
 Only sends Telegram alerts for FRESH crossovers (new since last scan).
 
 Deploy on Railway:  start command = python tvscreener.py
@@ -38,7 +38,7 @@ def fetch_signals() -> dict:
     EMA10 (5-min) > EMA20 (5-min), filtered by price and volume.
     Returns {symbol: {field: value}}.
     """
-    url     = "https://scanner.tradingview.com/america/scan"
+    url     = "https://scanner.tradingview.com/saudi/scan"
     headers = {
         "Content-Type": "application/json",
         "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
@@ -88,7 +88,7 @@ def save_state(symbols: list):
 
 
 def send_telegram(text: str):
-    url  = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
+    url  = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     data = {"chat_id": CHAT_ID, "text": text, "parse_mode": "HTML"}
     r    = requests.post(url, json=data, timeout=10)
     r.raise_for_status()
@@ -106,7 +106,7 @@ def build_message(new_signals: dict, total_in_signal: int) -> str:
     count = len(new_signals)
     lines = [
         "📡 <b>EMA10 ✕ EMA20 Crossover Alert</b>",
-        "⏱ 5-min chart  |  US Stocks",
+        "⏱ 5-min chart  |  Saudi Stocks 🇸🇦 (Tadawul)",
         f"🕐 {now}",
         f"🆕 {count} new signal(s)  |  {total_in_signal} total in zone\n",
     ]
@@ -161,7 +161,7 @@ def scan_once():
 
 def main():
     log("=== TradingView EMA Screener started ===")
-    log(f"Scanning every {INTERVAL_SEC // 60} minutes. Market: US Stocks | TF: 5-min")
+    log(f"Scanning every {INTERVAL_SEC // 60} minutes. Market: Saudi Stocks (Tadawul) | TF: 5-min")
 
     while True:
         try:
