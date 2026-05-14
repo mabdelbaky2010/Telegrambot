@@ -31,8 +31,8 @@ def webhook():
     icon = "🟢" if action == "BUY" else "🔴"
     
     msg = (
-        f"{icon} <b>تقاطع {'صاعد' if action == 'BUY' else 'هابط'}</b>\n"
-        f"📊 السهم: <b>{symbol}</b>\n"
+        f"{icon}  {'صاعد' if action == 'BUY' else 'هابط'}\n"
+        f"📊 السهم: {symbol}\n"
         f"💰 السعر: {price} ر.س\n"
         f"📈 EMA10: {ema10}  |  EMA20: {ema20}\n"
         f"⏱ الفريم: {interval}\n"
