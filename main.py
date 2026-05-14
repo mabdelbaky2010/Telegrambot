@@ -39,6 +39,7 @@ def webhook():
         ema20 = f"{float(ema20_raw):.2f}"
     except:
         ema20 = ema20_raw
+        pass
 
     icon = "🟢" if action == "BUY" else "🔴"
     
