@@ -10,8 +10,9 @@ def send_telegram(message):
     payload = {
         "chat_id": CHAT_ID,
         "text": message
+        "parse_mode": "HTML"
     }
-    requests.post(url, data=payload)
+    requests.post(url, json=payload)
 
 
 @app.route("/webhook", methods=["POST"])
