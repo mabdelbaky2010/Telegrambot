@@ -9,7 +9,7 @@ def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": message
+        "text": messageو
         "parse_mode": "HTML"
     }
     requests.post(url, json=payload)
