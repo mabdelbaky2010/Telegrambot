@@ -3,13 +3,13 @@ import requests
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHAT_ID = "-1003940485703",
+CHAT_ID = "1621604072"
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
     payload = {
         "chat_id": CHAT_ID,
-        "text": messageو
+        "text": message,
         "parse_mode": "HTML"
     }
     requests.post(url, json=payload)
