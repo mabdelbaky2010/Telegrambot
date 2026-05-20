@@ -3,7 +3,11 @@ import requests
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHAT_ID = "1621604072"
+RECIPIENTS = [
+    "-1003940485703",   # 📢 القناة الرئيسية
+     "1621604072",     # 👤 محمود (شخصي)
+     "1312946434",      # 👤 مستخدم 2
+]
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
