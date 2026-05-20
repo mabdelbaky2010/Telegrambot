@@ -1,13 +1,3 @@
-#!/usr/bin/env python3
-"""
-TradingView Webhook → Telegram (Multi-Recipient)
--------------------------------------------------
-يستقبل تنبيهات TradingView ويرسلها لقائمة مستخدمين/قنوات.
-
-Deploy on Railway:  python webhook.py
-Requirements:       pip install flask requests
-"""
-
 from flask import Flask, request
 import requests
 
