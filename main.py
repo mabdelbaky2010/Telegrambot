@@ -11,6 +11,7 @@ RECIPIENTS = [
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI/sendMessage"
+    for chat_id in RECIPIENTS:
     payload = {
         "chat_id": CHAT_ID,
         "text": message,
