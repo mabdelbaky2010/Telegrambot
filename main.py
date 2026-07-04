@@ -107,8 +107,8 @@ def build_ema_message(data):
     symbol   = data.get("symbol",   "N/A")
     action   = data.get("action",   "N/A")
     price    = fmt(data.get("price",  0))
-    ema10    = fmt(data.get("ema10",  ""))
-    ema20    = fmt(data.get("ema20",  ""))
+    ema10    = fmt(data.get("ema10",  "N/A"))
+    ema20    = fmt(data.get("ema20",  "N/A"))
     interval = data.get("interval", "N/A")
     time_val = data.get("time",     "N/A")
 
