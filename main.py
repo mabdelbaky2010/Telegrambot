@@ -9,68 +9,26 @@ import json
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHAT_ID        = "-1003940485703"
-USERS_FILE     = "users.json"
-# ADMIN_ID       = "1621604072"
-ADMIN_ID   = os.environ.get("ADMIN_ID", "1621604072")
-CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003940485703")
+CHANNEL_ID     = "-1003940485703"
+ADMIN_ID       = "1621604072"
 
 # =======================================
-#  ادارة المستخدمين
+#  ارسال للقناة
 # =======================================
-def load_users():
-    if os.path.exists(USERS_FILE):
-        with open(USERS_FILE) as f:
-            return json.load(f)
-    return [ADMIN_ID]
-
-def save_users(users):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f)
-
-def add_user(chat_id):
-    users = load_users()
-    chat_id = str(chat_id)
-    if chat_id not in users:
-        users.append(chat_id)
-        save_users(users)
-        return True
-    return False
-
-def remove_user(chat_id):
-    users = load_users()
-    chat_id = str(chat_id)
-    if chat_id in users:
-        users.remove(chat_id)
-        save_users(users)
-        return True
-    return False
-
-# =======================================
-#  ارسال تليجرام
-# =======================================
-   # عدّل الكود
 def send_telegram(message, chat_id=None):
-    # ابعت للقناة دائماً
-    targets = [CHANNEL_ID]
-    
-    # اضف chat_id إذا موجود
-    if chat_id and chat_id != CHANNEL_ID:
-        targets = [chat_id]
-    
-    for cid in targets:
-        try:
-            requests.post(
-                f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
-                json={
-                    "chat_id":    cid,
-                    "text":       message,
-                    "parse_mode": "HTML"
-                },
-                timeout=10
-            )
-        except Exception as e:
-            print(f"ERROR Telegram {cid}: {e}")
+    target = chat_id if chat_id else CHANNEL_ID
+    try:
+        requests.post(
+            f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
+            json={
+                "chat_id":    target,
+                "text":       message,
+                "parse_mode": "HTML"
+            },
+            timeout=10
+        )
+    except Exception as e:
+        print(f"ERROR Telegram: {e}")
 
 # =======================================
 #  تنسيق الارقام
@@ -82,15 +40,37 @@ def fmt(val):
         return str(val)
 
 # =======================================
+#  حساب الاهداف
+# =======================================
+def get_targets(action, price):
+    p = float(price)
+    if action == "CALL":
+        return {
+            "t1":   f"{p * 1.009:.2f}",
+            "t2":   f"{p * 1.018:.2f}",
+            "t3":   f"{p * 1.027:.2f}",
+            "stop": f"{p * 0.985:.2f}",
+        }
+    else:
+        return {
+            "t1":   f"{p * 0.991:.2f}",
+            "t2":   f"{p * 0.982:.2f}",
+            "t3":   f"{p * 0.973:.2f}",
+            "stop": f"{p * 1.015:.2f}",
+        }
+
+# =======================================
 #  بناء رسالة فيبوناتشى
 # =======================================
 def build_fib_message(data):
     symbol   = data.get("symbol",   "N/A")
     action   = data.get("action",   "N/A")
     level    = data.get("level",    "N/A")
-    price    = fmt(data.get("price",    "N/A"))
+    price    = fmt(data.get("price", 0))
     interval = data.get("interval", "N/A")
     time_val = data.get("time",     "N/A")
+
+    targets  = get_targets(action, data.get("price", 0))
 
     if action == "CALL":
         icon      = "CALL +"
@@ -101,11 +81,8 @@ def build_fib_message(data):
         direction = "شراء عقد PUT"
         color_txt = "هابط"
 
-    # تحديد الاهداف بناء على المستوى
-    targets = get_targets(action, level, float(data.get("price", 0)))
-
     sep = "--------------------------------"
-    msg = (
+    return (
         f"<b>{icon} {symbol}</b>\n"
         f"{sep}\n"
         f"النوع    : {direction}\n"
@@ -122,40 +99,6 @@ def build_fib_message(data):
         f"{sep}\n"
         f"الوقت    : {time_val}"
     )
-    return msg
-
-# =======================================
-#  حساب الاهداف من المستوى
-# =======================================
-def get_targets(action, level, price):
-    # نسب فيبوناتشى للحساب
-    fib_levels = {
-        "CALL": {
-            "78.6%": {"t1": 1.009, "t2": 1.018, "t3": 1.027, "stop": 0.985},
-            "61.8%": {"t1": 1.009, "t2": 1.018, "t3": 1.027, "stop": 0.985},
-            "50%":   {"t1": 1.009, "t2": 1.018, "t3": 1.027, "stop": 0.985},
-            "38.2%": {"t1": 1.009, "t2": 1.018, "t3": 1.027, "stop": 0.985},
-            "23.6%": {"t1": 1.009, "t2": 1.018, "t3": 1.027, "stop": 0.985},
-        },
-        "PUT": {
-            "23.6%": {"t1": 0.991, "t2": 0.982, "t3": 0.973, "stop": 1.015},
-            "38.2%": {"t1": 0.991, "t2": 0.982, "t3": 0.973, "stop": 1.015},
-            "50%":   {"t1": 0.991, "t2": 0.982, "t3": 0.973, "stop": 1.015},
-            "61.8%": {"t1": 0.991, "t2": 0.982, "t3": 0.973, "stop": 1.015},
-            "78.6%": {"t1": 0.991, "t2": 0.982, "t3": 0.973, "stop": 1.015},
-        }
-    }
-
-    try:
-        ratios = fib_levels[action][level]
-        return {
-            "t1":   f"{price * ratios['t1']:.2f}",
-            "t2":   f"{price * ratios['t2']:.2f}",
-            "t3":   f"{price * ratios['t3']:.2f}",
-            "stop": f"{price * ratios['stop']:.2f}",
-        }
-    except:
-        return {"t1": "N/A", "t2": "N/A", "t3": "N/A", "stop": "N/A"}
 
 # =======================================
 #  بناء رسالة EMA
@@ -163,9 +106,9 @@ def get_targets(action, level, price):
 def build_ema_message(data):
     symbol   = data.get("symbol",   "N/A")
     action   = data.get("action",   "N/A")
-    price    = fmt(data.get("price",    "N/A"))
-    ema10    = fmt(data.get("ema10",    ""))
-    ema20    = fmt(data.get("ema20",    ""))
+    price    = fmt(data.get("price",  0))
+    ema10    = fmt(data.get("ema10",  ""))
+    ema20    = fmt(data.get("ema20",  ""))
     interval = data.get("interval", "N/A")
     time_val = data.get("time",     "N/A")
 
@@ -173,7 +116,7 @@ def build_ema_message(data):
     direction = "شراء"  if action == "BUY" else "بيع"
 
     sep = "--------------------------------"
-    msg = (
+    return (
         f"<b>{icon} {symbol}</b>\n"
         f"{sep}\n"
         f"التوصية  : {direction}\n"
@@ -184,31 +127,23 @@ def build_ema_message(data):
         f"{sep}\n"
         f"الوقت    : {time_val}"
     )
-    return msg
 
 # =======================================
-//  Webhook - يستقبل اشارات TradingView
+#  Webhook - اشارات TradingView
 # =======================================
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
         data = request.json
-
         if not data:
-            return {"status": "error", "message": "no data"}, 400
+            return {"status": "error"}, 400
 
         action = data.get("action", "")
-        level  = data.get("level",  "")
 
-        # اشارة فيبوناتشى
         if action in ["CALL", "PUT"]:
             msg = build_fib_message(data)
-
-        # اشارة EMA
         elif action in ["BUY", "SELL"]:
             msg = build_ema_message(data)
-
-        # اشارة غير معروفة
         else:
             msg = f"اشارة جديدة:\n{json.dumps(data, ensure_ascii=False, indent=2)}"
 
@@ -220,7 +155,7 @@ def webhook():
         return {"status": "error", "message": str(e)}, 500
 
 # =======================================
-#  Webhook تليجرام - اوامر المستخدمين
+#  Webhook - اوامر تليجرام
 # =======================================
 @app.route("/telegram", methods=["POST"])
 def telegram_update():
@@ -233,47 +168,54 @@ def telegram_update():
     chat_id = str(msg["chat"]["id"])
     text    = msg.get("text", "")
 
+    # امر /start
     if text == "/start":
-        added = add_user(chat_id)
-        if added:
-            send_telegram(
-                "<b>تم تسجيلك بنجاح</b>\n"
-                "ستصلك اشارات التداول تلقائياً\n\n"
-                "الاوامر:\n"
-                "/start  - اشتراك\n"
-                "/stop   - الغاء الاشتراك\n"
-                "/status - حالة الاشتراك",
-                chat_id
-            )
-        else:
-            send_telegram("انت مشترك بالفعل", chat_id)
-
-    elif text == "/stop":
-        if chat_id == ADMIN_ID:
-            send_telegram("لا يمكن الغاء اشتراك الادمن", chat_id)
-        else:
-            remove_user(chat_id)
-            send_telegram("تم الغاء اشتراكك", chat_id)
-
-    elif text == "/status":
-        users = load_users()
-        status = "مشترك" if chat_id in users else "غير مشترك"
         send_telegram(
-            f"الحالة: {status}\n"
-            f"اجمالي المشتركين: {len(users)}",
+            "<b>مرحباً بك في WolfStock</b>\n\n"
+            "اشترك في القناة لتصلك الاشارات:\n"
+            "@wolfstock7\n\n"
+            "الاشارات تصل تلقائياً للقناة",
             chat_id
         )
 
-    elif text == "/list" and chat_id == ADMIN_ID:
-        users = load_users()
-        msg_text = f"<b>المشتركون ({len(users)}):</b>\n"
-        for u in users:
-            msg_text += f"- {u}\n"
-        send_telegram(msg_text, chat_id)
+    # امر /help
+    elif text == "/help":
+        send_telegram(
+            "<b>مساعدة WolfStock</b>\n\n"
+            "الاشارات تصل للقناة تلقائياً\n"
+            "اشترك في القناة: @wolfstock7\n\n"
+            "/start - رسالة ترحيب\n"
+            "/help  - المساعدة",
+            chat_id
+        )
 
-    elif text.startswith("/broadcast ") and chat_id == ADMIN_ID:
-        broadcast_msg = text.replace("/broadcast ", "")
-        send_telegram(f"<b>رسالة من الادمن:</b>\n{broadcast_msg}")
+    # امر /test للادمن
+    elif text == "/test" and chat_id == ADMIN_ID:
+        send_telegram(
+            "<b>CALL + SPX</b>\n"
+            "--------------------------------\n"
+            "النوع    : شراء عقد CALL\n"
+            "المستوى  : فيبوناتشى 61.8%\n"
+            "السعر    : 5250.00\n"
+            "الفريم   : 15 دقيقة\n"
+            "--------------------------------\n"
+            "هدف 1   : 5297.25\n"
+            "هدف 2   : 5344.50\n"
+            "هدف 3   : 5391.75\n"
+            "--------------------------------\n"
+            "وقف خسارة: 5171.25\n"
+            "--------------------------------\n"
+            "الوقت    : 2026-07-04 15:00"
+        )
+
+    # امر /stats للادمن
+    elif text == "/stats" and chat_id == ADMIN_ID:
+        send_telegram(
+            f"<b>احصائيات البوت</b>\n"
+            f"القناة: {CHANNEL_ID}\n"
+            f"البوت يعمل بشكل صحيح",
+            chat_id
+        )
 
     return {"ok": True}
 
@@ -282,8 +224,7 @@ def telegram_update():
 # =======================================
 @app.route("/", methods=["GET"])
 def home():
-    users = load_users()
-    return {"status": "running", "subscribers": len(users)}, 200
+    return {"status": "running", "channel": CHANNEL_ID}, 200
 
 # =======================================
 #  الموقت
