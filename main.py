@@ -11,7 +11,9 @@ app = Flask(__name__)
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
 CHAT_ID        = "-1003940485703"
 USERS_FILE     = "users.json"
-ADMIN_ID       = "1621604072"
+# ADMIN_ID       = "1621604072"
+ADMIN_ID   = os.environ.get("ADMIN_ID", "1621604072")
+CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003940485703")
 
 # =======================================
 #  ادارة المستخدمين
@@ -47,8 +49,15 @@ def remove_user(chat_id):
 # =======================================
 #  ارسال تليجرام
 # =======================================
+   # عدّل الكود
 def send_telegram(message, chat_id=None):
-    targets = [chat_id] if chat_id else load_users()
+    # ابعت للقناة دائماً
+    targets = [CHANNEL_ID]
+    
+    # اضف chat_id إذا موجود
+    if chat_id and chat_id != CHANNEL_ID:
+        targets = [chat_id]
+    
     for cid in targets:
         try:
             requests.post(
