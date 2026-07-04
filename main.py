@@ -9,7 +9,7 @@ import json
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHANNEL_ID     = "-1003940485703"
+CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003940485703")
 ADMIN_ID       = "1621604072"
 
 # =======================================
