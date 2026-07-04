@@ -9,7 +9,7 @@ import json
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = "8784816733:AAF2FpH9EqJ85BzVUjSXH1UI4McDIhSbNvI"
-CHANNEL_ID = os.environ.get("CHANNEL_ID", "-1003940485703")
+CHANNEL_ID     = os.environ.get("CHANNEL_ID", "-1003940485703")
 ADMIN_ID       = "1621604072"
 
 # =======================================
@@ -18,7 +18,7 @@ ADMIN_ID       = "1621604072"
 def send_telegram(message, chat_id=None):
     target = chat_id if chat_id else CHANNEL_ID
     try:
-        requests.post(
+        r = requests.post(
             f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage",
             json={
                 "chat_id":    target,
@@ -27,6 +27,7 @@ def send_telegram(message, chat_id=None):
             },
             timeout=10
         )
+        print(f"Telegram response: {r.status_code} | {r.text}")
     except Exception as e:
         print(f"ERROR Telegram: {e}")
 
@@ -43,7 +44,11 @@ def fmt(val):
 #  حساب الاهداف
 # =======================================
 def get_targets(action, price):
-    p = float(price)
+    try:
+        p = float(price)
+    except:
+        return {"t1": "N/A", "t2": "N/A", "t3": "N/A", "stop": "N/A"}
+
     if action == "CALL":
         return {
             "t1":   f"{p * 1.009:.2f}",
@@ -69,7 +74,6 @@ def build_fib_message(data):
     price    = fmt(data.get("price", 0))
     interval = data.get("interval", "N/A")
     time_val = data.get("time",     "N/A")
-
     targets  = get_targets(action, data.get("price", 0))
 
     if action == "CALL":
@@ -136,12 +140,15 @@ def webhook():
     try:
         # ✅ يقبل اي نوع content-type
         data = request.get_json(force=True, silent=True)
-        
+
         if not data:
             data = request.form.to_dict()
-        
+
         if not data:
+            print("ERROR: no data received")
             return {"status": "error", "message": "no data"}, 400
+
+        print(f"Webhook received: {data}")
 
         action = data.get("action", "")
 
@@ -152,6 +159,7 @@ def webhook():
         else:
             msg = f"اشارة جديدة:\n{json.dumps(data, ensure_ascii=False, indent=2)}"
 
+        # ✅ يبعت للقناة دائماً
         send_telegram(msg)
         return {"status": "ok"}, 200
 
@@ -164,65 +172,71 @@ def webhook():
 # =======================================
 @app.route("/telegram", methods=["POST"])
 def telegram_update():
-    data = request.json
+    try:
+        # ✅ يقبل اي نوع content-type
+        data = request.get_json(force=True, silent=True)
 
-    if "message" not in data:
+        if not data or "message" not in data:
+            return {"ok": True}
+
+        msg     = data["message"]
+        chat_id = str(msg["chat"]["id"])
+        text    = msg.get("text", "")
+
+        print(f"Telegram command: {text} from {chat_id}")
+
+        if text == "/start":
+            send_telegram(
+                "<b>مرحباً بك في WolfStock</b>\n\n"
+                "اشترك في القناة لتصلك الاشارات:\n"
+                "@wofl7stocks\n\n"
+                "الاشارات تصل تلقائياً للقناة",
+                chat_id
+            )
+
+        elif text == "/help":
+            send_telegram(
+                "<b>مساعدة WolfStock</b>\n\n"
+                "الاشارات تصل للقناة تلقائياً\n"
+                "اشترك في القناة: @wofl7stocks\n\n"
+                "/start - رسالة ترحيب\n"
+                "/help  - المساعدة",
+                chat_id
+            )
+
+        elif text == "/test" and chat_id == ADMIN_ID:
+            # ✅ يبعت للقناة مش للأدمن فقط
+            send_telegram(
+                "<b>CALL + SPX</b>\n"
+                "--------------------------------\n"
+                "النوع    : شراء عقد CALL\n"
+                "المستوى  : فيبوناتشى 61.8%\n"
+                "السعر    : 5250.00\n"
+                "الفريم   : 15 دقيقة\n"
+                "--------------------------------\n"
+                "هدف 1   : 5297.25\n"
+                "هدف 2   : 5344.50\n"
+                "هدف 3   : 5391.75\n"
+                "--------------------------------\n"
+                "وقف خسارة: 5171.25\n"
+                "--------------------------------\n"
+                "الوقت    : 2026-07-04 15:00"
+            )
+            send_telegram("تم ارسال رسالة تجريبية للقناة", chat_id)
+
+        elif text == "/stats" and chat_id == ADMIN_ID:
+            send_telegram(
+                f"<b>احصائيات البوت</b>\n"
+                f"القناة: {CHANNEL_ID}\n"
+                f"البوت يعمل بشكل صحيح",
+                chat_id
+            )
+
         return {"ok": True}
 
-    msg     = data["message"]
-    chat_id = str(msg["chat"]["id"])
-    text    = msg.get("text", "")
-
-    # امر /start
-    if text == "/start":
-        send_telegram(
-            "<b>مرحباً بك في WolfStock</b>\n\n"
-            "اشترك في القناة لتصلك الاشارات:\n"
-            "@wolfstock7\n\n"
-            "الاشارات تصل تلقائياً للقناة",
-            chat_id
-        )
-
-    # امر /help
-    elif text == "/help":
-        send_telegram(
-            "<b>مساعدة WolfStock</b>\n\n"
-            "الاشارات تصل للقناة تلقائياً\n"
-            "اشترك في القناة: @wolfstock7\n\n"
-            "/start - رسالة ترحيب\n"
-            "/help  - المساعدة",
-            chat_id
-        )
-
-    # امر /test للادمن
-    elif text == "/test" and chat_id == ADMIN_ID:
-        send_telegram(
-            "<b>CALL + SPX</b>\n"
-            "--------------------------------\n"
-            "النوع    : شراء عقد CALL\n"
-            "المستوى  : فيبوناتشى 61.8%\n"
-            "السعر    : 5250.00\n"
-            "الفريم   : 15 دقيقة\n"
-            "--------------------------------\n"
-            "هدف 1   : 5297.25\n"
-            "هدف 2   : 5344.50\n"
-            "هدف 3   : 5391.75\n"
-            "--------------------------------\n"
-            "وقف خسارة: 5171.25\n"
-            "--------------------------------\n"
-            "الوقت    : 2026-07-04 15:00"
-        )
-
-    # امر /stats للادمن
-    elif text == "/stats" and chat_id == ADMIN_ID:
-        send_telegram(
-            f"<b>احصائيات البوت</b>\n"
-            f"القناة: {CHANNEL_ID}\n"
-            f"البوت يعمل بشكل صحيح",
-            chat_id
-        )
-
-    return {"ok": True}
+    except Exception as e:
+        print(f"ERROR telegram_update: {e}")
+        return {"ok": True}
 
 # =======================================
 #  Health Check
