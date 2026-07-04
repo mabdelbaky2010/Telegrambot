@@ -134,9 +134,14 @@ def build_ema_message(data):
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
-        data = request.json
+        # ✅ يقبل اي نوع content-type
+        data = request.get_json(force=True, silent=True)
+        
         if not data:
-            return {"status": "error"}, 400
+            data = request.form.to_dict()
+        
+        if not data:
+            return {"status": "error", "message": "no data"}, 400
 
         action = data.get("action", "")
 
