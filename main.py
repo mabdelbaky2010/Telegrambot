@@ -95,35 +95,6 @@ def build_fib_message(data):
         f"الوقت    : {time_val}"
     )
 # =======================================
-#  بناء رسالة EMA (تم التعديل: اهداف بدل EMA10/EMA20)
-# =======================================
-def build_ema_message(data):
-    symbol   = data.get("symbol",   "N/A")
-    action   = data.get("action",   "N/A")
-    price    = fmt(data.get("price",  0))
-    interval = data.get("interval", "N/A")
-    time_val = data.get("time",     "N/A")
-    # BUY تتحسب زي CALL و SELL تتحسب زي PUT
-    targets  = get_targets("CALL" if action == "BUY" else "PUT", data.get("price", 0))
-    icon      = "BUY +" if action == "BUY" else "SELL -"
-    direction = "شراء"  if action == "BUY" else "بيع"
-    sep = "--------------------------------"
-    return (
-        f"<b>{icon} {symbol}</b>\n"
-        f"{sep}\n"
-        f"التوصية  : {direction}\n"
-        f"السعر    : {price}\n"
-        f"الفريم   : {interval} دقيقة\n"
-        f"{sep}\n"
-        f"هدف 1   : {targets['t1']}\n"
-        f"هدف 2   : {targets['t2']}\n"
-        f"هدف 3   : {targets['t3']}\n"
-        f"{sep}\n"
-        f"وقف خسارة: {targets['stop']}\n"
-        f"{sep}\n"
-        f"الوقت    : {time_val}"
-    )
-# =======================================
 #  Webhook - اشارات TradingView
 # =======================================
 @app.route("/webhook", methods=["POST"])
@@ -140,8 +111,6 @@ def webhook():
         action = data.get("action", "")
         if action in ["CALL", "PUT"]:
             msg = build_fib_message(data)
-        elif action in ["BUY", "SELL"]:
-            msg = build_ema_message(data)
         else:
             msg = f"اشارة جديدة:\n{json.dumps(data, ensure_ascii=False, indent=2)}"
         # ✅ يبعت للقناة دائماً
